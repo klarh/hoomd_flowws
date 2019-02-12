@@ -22,6 +22,8 @@ class Interaction(flowws.Stage):
                                  if not isinstance(c, Interaction)]
             callbacks['pre_run'] = pre_run_callbacks
 
+        callbacks['pre_run'].append(self)
+
     def __call__(self, scope, storage):
         interaction_type = self.arguments['type']
         params = self.arguments['params']
@@ -29,11 +31,18 @@ class Interaction(flowws.Stage):
         if 'nlist' not in scope:
             scope['nlist'] = hoomd.md.nlist.tree()
         nlist = scope['nlist']
+        system = scope['system']
 
         if interaction_type == 'pair.lj':
-            interaction = hoomd.md.pair.lj(params['rcut'], nlist)
+            pair_params = params.pop('pair_params')
+            kwargs = dict(nlist=nlist, **params)
+            interaction = hoomd.md.pair.lj(**kwargs)
 
-            for (a, b, kwargs) in params['pair_params']:
+            for (a, b, kwargs) in pair_params:
+                if a == '_':
+                    a = system.particles.types
+                if b == '_':
+                    b = system.particles.types
                 interaction.pair_coeff.set(a, b, **kwargs)
 
             interaction.set_params(mode='shift')
