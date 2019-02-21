@@ -153,6 +153,7 @@ def modify_shapedef(shape, modifications):
         mod_type = mod['type']
         if mod_type == 'scale':
             factor = mod['factor']
+            shape['vertices'] = (factor*np.array(shape['vertices'])).tolist()
             shape['circumsphere_radius'] *= factor
             poly = shape['rounding_volume_polynomial']
             for (i, v) in enumerate(poly):

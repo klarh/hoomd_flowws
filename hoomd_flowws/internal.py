@@ -36,6 +36,7 @@ class HoomdContext(contextlib.ExitStack):
 
         self.scope = scope
         self.storage = storage
+        self.cached_snapshot_ = None
 
         self.context_args = context_args
 
@@ -63,6 +64,12 @@ class HoomdContext(contextlib.ExitStack):
 
     def cancel_saving(self):
         self.restore_context.scope = None
+
+    @property
+    def snapshot(self):
+        if self.cached_snapshot_ is None:
+            self.cached_snapshot_ = self.scope['system'].take_snapshot()
+        return self.cached_snapshot_
 
 class WorkflowError(RuntimeError):
     def __init__(self, msg):
