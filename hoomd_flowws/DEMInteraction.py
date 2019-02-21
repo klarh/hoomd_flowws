@@ -31,9 +31,7 @@ class DEMInteraction(flowws.Stage):
     def __call__(self, scope, storage):
         interaction_type = self.arguments['type']
 
-        if 'nlist' not in scope:
-            scope['nlist'] = hoomd.md.nlist.tree()
-        nlist = scope['nlist']
+        nlist = hoomd.md.nlist.tree()
         system = scope['system']
 
         try:
