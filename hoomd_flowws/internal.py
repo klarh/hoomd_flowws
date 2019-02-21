@@ -63,3 +63,7 @@ class HoomdContext(contextlib.ExitStack):
 
     def cancel_saving(self):
         self.restore_context.scope = None
+
+class WorkflowError(RuntimeError):
+    def __init__(self, msg):
+        self.message = msg

@@ -26,11 +26,9 @@ class Interaction(flowws.Stage):
 
     def __call__(self, scope, storage):
         interaction_type = self.arguments['type']
-        params = self.arguments['params']
+        params = dict(self.arguments['params'])
 
-        if 'nlist' not in scope:
-            scope['nlist'] = hoomd.md.nlist.tree()
-        nlist = scope['nlist']
+        nlist = hoomd.md.nlist.tree()
         system = scope['system']
 
         if interaction_type == 'pair.lj':
