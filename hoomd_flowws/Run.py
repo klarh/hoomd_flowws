@@ -63,9 +63,12 @@ class Run(flowws.Stage):
             dump_file = context.enter_context(
                 storage.open(dump_filename, 'ab', on_filesystem=True))
 
+            dynamic_quantities = (
+                ['viz_aniso_dynamic'] if 'type_shapes' in scope else ['viz_dynamic'])
+
             dump = hoomd.dump.getar.simple(
                 dump_file.name,  self.arguments['dump_period'], 'a',
-                static=['viz_static'], dynamic=['viz_aniso_dynamic'])
+                static=['viz_static'], dynamic=dynamic_quantities)
 
             if 'type_shapes' in scope:
                 type_shapes = scope['type_shapes']
