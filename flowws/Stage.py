@@ -1,5 +1,6 @@
 import argparse
 import logging
+import sys
 
 from . import internal
 
@@ -40,7 +41,8 @@ class Stage:
 
     @classmethod
     def from_command(cls, args):
-        parser = argparse.ArgumentParser(description=cls.__doc__)
+        parser = argparse.ArgumentParser(
+            prog=cls.__name__, description=cls.__doc__)
 
         for arg in cls.ARGS:
             name = '--{}'.format(arg.name.replace('_', '-'))
