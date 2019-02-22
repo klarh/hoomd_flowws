@@ -30,6 +30,7 @@ class Shape:
 
     @classmethod
     def convex_polyhedron(cls, function):
+        """Decorator to register a convex polyhedron generator function"""
         name = function.__name__
 
         pattern = re.compile(r'^(?P<name>[a-zA-Z_]+)_shape$')
@@ -44,6 +45,7 @@ class Shape:
 
     @classmethod
     def convex_polyhedron_shapedef(cls, name, params):
+        """Get a previously-registered convex polyhedron by its name"""
         shape_info = cls.convex_polyhedron_functions[name](**params)
         vertices = np.array(shape_info.vertices, dtype=np.float32).tolist()
 
@@ -58,6 +60,7 @@ class Shape:
 
     @classmethod
     def get_shapedef(cls, name, params):
+        """Get a previously-registered shape of any type by its name"""
         if name in cls.convex_polyhedron_functions:
             return cls.convex_polyhedron_shapedef(name, params)
         else:
@@ -65,6 +68,7 @@ class Shape:
 
     @classmethod
     def verify_registered_shapes(cls):
+        """Validate all registered shapes"""
         import scipy as sp, scipy.spatial
 
         for name in cls.convex_polyhedron_functions:
