@@ -12,6 +12,7 @@ class Init(flowws.Stage):
         [
             ('number', int, None, 'Number of particles to simulate'),
             ('mass_scale', float, 1, 'Scaling factor for mass of all particles'),
+            ('type_ratios', eval, [], 'Prevalence of each particle type')
         ]
     ))
 
@@ -19,13 +20,27 @@ class Init(flowws.Stage):
         # factor to scale initial particle distance by
         spacing = 1.
 
+        default_type_ratios = [1]*len(scope.get('type_shapes', [None]))
+        type_ratios = np.array((self.arguments['type_ratios'] or default_type_ratios), dtype=np.float32)
+        type_ratios /= np.sum(type_ratios)
+
         if 'type_shapes' in scope:
             shapes = scope['type_shapes']
+
+            assert len(type_ratios) == len(shapes)
+
             spacing = 2*max(shape.get('circumsphere_radius', 0.5) for shape in shapes)
 
+            type_masses = []
             type_moments = []
             for shape in scope['type_shapes']:
+                volume = np.polyval(
+                    shape['rounding_volume_polynomial'], shape.get('rounding_radius', 0))
+                # treat default density to give 1 m_0 per unit-diameter sphere
+                type_masses.append(6/np.pi*volume)
+
                 vertices = shape['vertices']
+
                 if len(vertices[0]) == 2:
                     (_, _, inertia_tensor) = hoomd.dem.utils.massProperties(vertices)
                     type_moments.append(
@@ -36,9 +51,14 @@ class Init(flowws.Stage):
                         vertices, faces)
                     type_moments.append(
                         (inertia_tensor[0], inertia_tensor[3], inertia_tensor[5]))
-            type_moments = np.array(type_moments, dtype=np.float32)
         else:
-            type_moments = None
+            type_masses = len(type_ratios)*[1]
+            type_moments = len(type_ratios)*[(0, 0, 0)]
+
+        type_masses = np.array(type_masses, dtype=np.float32)*self.arguments['mass_scale']
+        type_moments = np.array(type_moments, dtype=np.float32)*6/np.pi*self.arguments['mass_scale']
+
+        type_names = [chr(ord('A') + i) for i in range(len(type_ratios))]
 
         particle_number = self.arguments['number']
         grid_n = int(np.ceil(particle_number**(1./3)))
@@ -54,6 +74,12 @@ class Init(flowws.Stage):
             select_indices = np.sort(select_indices)
             positions = positions[select_indices]
 
+        types = np.zeros(particle_number, dtype=np.int32)
+        type_indices = (np.cumsum([0] + type_ratios.tolist())*particle_number).astype(np.uint32)
+        for i, (start, end) in enumerate(zip(type_indices[:-1], type_indices[1:])):
+            types[start:end] = i
+        np.random.shuffle(types)
+
         box = hoomd.data.boxdim(grid_n*spacing, grid_n*spacing, grid_n*spacing, 0, 0, 0)
 
         try:
@@ -62,11 +88,11 @@ class Init(flowws.Stage):
         except FileNotFoundError:
             with HoomdContext(scope, storage, restore=False) as ctx:
                 snapshot = hoomd.data.make_snapshot(particle_number, box)
-                snapshot.particles.position[:] = positions
-                snapshot.particles.mass[:] *= self.arguments['mass_scale']
 
-                if type_moments is not None:
-                    moments = type_moments[snapshot.particles.typeid]
-                    snapshot.particles.moment_inertia[:] = moments
+                snapshot.particles.position[:] = positions
+                snapshot.particles.mass[:] = type_masses[types]
+                snapshot.particles.moment_inertia[:] = type_moments[types]
+                snapshot.particles.types = type_names
+                snapshot.particles.typeid[:] = types
 
                 system = hoomd.init.read_snapshot(snapshot)
