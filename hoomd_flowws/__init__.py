@@ -1,3 +1,5 @@
+from .version import __version__
+
 from .DEMInteraction import DEMInteraction
 from .Init import Init
 from .Interaction import Interaction
