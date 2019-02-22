@@ -3,10 +3,10 @@
 import os
 from setuptools import setup
 
-with open('flowws/version.py') as version_file:
+with open('hoomd_flowws/version.py') as version_file:
     exec(version_file.read())
 
-setup(name='flowws',
+setup(name='hoomd_flowws',
       author='Matthew Spellings',
       author_email='matthew.p.spellings@gmail.com',
       classifiers=[
@@ -14,17 +14,21 @@ setup(name='flowws',
           'License :: OSI Approved :: BSD License',
           'Programming Language :: Python :: 3',
       ],
-      description='Library for development of stage-based scientific workflows',
+      description='Stage-based scientific workflows using HOOMD-Blue',
       entry_points={
-          'console_scripts': [
-              'flowws_run = flowws:Workflow.from_command',
+          'flowws_modules': [
+              'DEMInteraction = hoomd_flowws:DEMInteraction',
+              'Init = hoomd_flowws:Init',
+              'Interaction = hoomd_flowws:Interaction',
+              'Run = hoomd_flowws:Run',
+              'ShapeDefinition = hoomd_flowws:ShapeDefinition',
           ],
       },
       extras_require={},
-      install_requires=[],
+      install_requires=['flowws'],
       license='BSD',
       packages=[
-          'flowws',
+          'hoomd_flowws',
       ],
       python_requires='>=3',
       version=__version__
