@@ -173,6 +173,19 @@ class Shape:
                 raise
 
 @Shape.convex_polyhedron
+def cube_shape():
+    d = 0.5
+    vertices = list(itertools.product([-d, d], [-d, d], [-d, d]))
+
+    volume = 1
+    surface_area = 6
+    weighted_edge_length = 9*np.pi
+
+    volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
+@Shape.convex_polyhedron
 def tetrahedron_shape():
     d = (8./3)**(-1./3)
     vertices = [(d, d, d), (d, -d, -d),
