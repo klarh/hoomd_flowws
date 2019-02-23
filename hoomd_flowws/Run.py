@@ -4,7 +4,7 @@ import logging
 
 import numpy as np
 
-from .internal import HoomdContext
+from .internal import intfloat, HoomdContext
 import hoomd
 import hoomd.md
 import flowws
@@ -15,12 +15,16 @@ class Run(flowws.Stage):
     ARGS = list(itertools.starmap(
         flowws.Stage.ArgumentSpecification,
         [
-            ('steps', int, None, 'Number of timesteps to run'),
+            ('steps', intfloat, None, 'Number of timesteps to run'),
             ('timestep_size', float, .005, 'Timestep size'),
             ('integrator', str, None, 'Integrator type'),
-            ('integrator_params', eval, {}, 'Parameters for integrator'),
-            ('backup_period', int, 0, 'Period for dumping a backup file'),
-            ('dump_period', int, 0, 'Period for dumping a trajectory file'),
+            ('temperature', float, 1, 'Temperature for isothermal simulations'),
+            ('tau_t', float, 1, 'Thermostat time constant for isothermal simulations'),
+            ('pressure', float, 1, 'Pressure for isobaric simulations'),
+            ('tau_p', float, 10, 'Barostat time constant for isobaric simulations'),
+            ('bd_seed', int, 12, 'Random number seed for Brownian/Langevin thermostats'),
+            ('backup_period', intfloat, 0, 'Period for dumping a backup file'),
+            ('dump_period', intfloat, 0, 'Period for dumping a trajectory file'),
             ('expand_by', float, None, 'Expand each dimension of the box by this ratio during this stage'),
             ('compress_to', float, None, 'Compress to the given packing fraction during this stage (overrides expand_by)'),
         ]
@@ -28,19 +32,31 @@ class Run(flowws.Stage):
 
     def setup_integrator(self, scope, storage):
         integrator_type = self.arguments['integrator']
-        integrator_params = self.arguments['integrator_params']
 
         if integrator_type == 'nve':
             integrator = hoomd.md.integrate.nve(hoomd.group.all())
         elif integrator_type == 'nvt':
+            kT = self.arguments['temperature']
+            tau = self.arguments['tau_t']
             integrator = hoomd.md.integrate.nvt(
-                hoomd.group.all(), **integrator_params)
+                hoomd.group.all(), kT=kT, tau=tau)
         elif integrator_type == 'langevin':
+            kT = self.arguments['temperature']
+            seed = self.arguments['bd_seed']
             integrator = hoomd.md.integrate.langevin(
-                hoomd.group.all(), **integrator_params)
+                hoomd.group.all(), kT=kT, seed=seed)
+        elif integrator_type == 'brownian':
+            kT = self.arguments['temperature']
+            seed = self.arguments['bd_seed']
+            integrator = hoomd.md.integrate.brownian(
+                hoomd.group.all(), kT=kT, seed=seed)
         elif integrator_type == 'npt':
+            kT = self.arguments['temperature']
+            tau = self.arguments['tau_t']
+            pressure = self.arguments['pressure']
+            tauP = self.arguments['tau_p']
             integrator = hoomd.md.integrate.npt(
-                hoomd.group.all(), **integrator_params)
+                hoomd.group.all(), kT=kT, tau=tau, P=pressure, tauP=tauP)
         else:
             raise NotImplementedError(
                 'Unknown integrator type {}'.format(integrator_type))

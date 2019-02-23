@@ -3,6 +3,10 @@ import contextlib
 import hoomd
 import flowws
 
+def intfloat(x):
+    """int . float (for convenience in command-line specification)"""
+    return int(float(x))
+
 class RestoreStateContext:
     def __init__(self, scope, storage, restore):
         self.scope = scope
@@ -31,14 +35,14 @@ class RestoreStateContext:
         self.try_saving()
 
 class HoomdContext(contextlib.ExitStack):
-    def __init__(self, scope, storage, context_args=None, restore=True):
+    def __init__(self, scope, storage, restore=True):
         super(HoomdContext, self).__init__()
 
         self.scope = scope
         self.storage = storage
         self.cached_snapshot_ = None
 
-        self.context_args = context_args
+        self.context_args = self.scope.get('hoomd_context_args', '')
 
         self.hoomd_context = self.enter_context(
             hoomd.context.initialize(self.context_args))
