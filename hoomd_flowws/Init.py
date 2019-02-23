@@ -20,6 +20,12 @@ class Init(flowws.Stage):
         # factor to scale initial particle distance by
         spacing = 1.
 
+        dimensions = scope.get('dimensions', 3)
+        assert dimensions in (2, 3)
+
+        # treat default density to give 1 m_0 per unit-diameter sphere
+        particle_density = 4/np.pi if dimensions == 2 else 6/np.pi
+
         default_type_ratios = [1]*len(scope.get('type_shapes', [None]))
         type_ratios = np.array((self.arguments['type_ratios'] or default_type_ratios), dtype=np.float32)
         type_ratios /= np.sum(type_ratios)
@@ -34,10 +40,10 @@ class Init(flowws.Stage):
             type_masses = []
             type_moments = []
             for shape in scope['type_shapes']:
+                # "volume" here is an area in 2D
                 volume = np.polyval(
                     shape['rounding_volume_polynomial'], shape.get('rounding_radius', 0))
-                # treat default density to give 1 m_0 per unit-diameter sphere
-                type_masses.append(6/np.pi*volume)
+                type_masses.append(particle_density*volume)
 
                 vertices = shape['vertices']
 
@@ -55,17 +61,20 @@ class Init(flowws.Stage):
             type_masses = len(type_ratios)*[1]
             type_moments = len(type_ratios)*[(0, 0, 0)]
 
-        type_masses = np.array(type_masses, dtype=np.float32)*self.arguments['mass_scale']
-        type_moments = np.array(type_moments, dtype=np.float32)*6/np.pi*self.arguments['mass_scale']
+        type_masses = (np.array(type_masses, dtype=np.float32)*
+                       self.arguments['mass_scale'])
+        type_moments = (np.array(type_moments, dtype=np.float32)*
+                        particle_density*self.arguments['mass_scale'])
 
         type_names = [chr(ord('A') + i) for i in range(len(type_ratios))]
 
         particle_number = self.arguments['number']
-        grid_n = int(np.ceil(particle_number**(1./3)))
+        grid_n = int(np.ceil(particle_number**(1./dimensions)))
         grid_x = (np.arange(grid_n) - 0.5*grid_n)*spacing
+        grid_z = [0] if dimensions == 2 else grid_x
 
         positions = np.array(list(itertools.product(
-            grid_x, grid_x, grid_x)), dtype=np.float32)
+            grid_x, grid_x, grid_z)), dtype=np.float32)
         # randomly select particles if we created more than necessary
         if len(positions) != particle_number:
             select_indices = np.arange(len(positions))
@@ -80,7 +89,9 @@ class Init(flowws.Stage):
             types[start:end] = i
         np.random.shuffle(types)
 
-        box = hoomd.data.boxdim(grid_n*spacing, grid_n*spacing, grid_n*spacing, 0, 0, 0)
+        Lz = 1 if dimensions == 2 else grid_n*spacing
+        box = hoomd.data.boxdim(
+            grid_n*spacing, grid_n*spacing, Lz, 0, 0, 0, dimensions=dimensions)
 
         try:
             with HoomdContext(scope, storage) as ctx:

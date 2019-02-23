@@ -94,10 +94,12 @@ class Run(flowws.Stage):
         if not self.arguments.get('compress_to', None) and not self.arguments.get('expand_by', None):
             return
 
+        dimensions = scope.get('dimensions', 3)
+
         if self.arguments.get('compress_to', None):
             current_phi = compute_packing_fraction(scope, storage, context.snapshot)
             volume_ratio = current_phi/self.arguments['compress_to']
-            length_ratio = volume_ratio**(1./3)
+            length_ratio = volume_ratio**(1./dimensions)
             self.arguments['expand_by'] = length_ratio
 
         box = context.snapshot.box
@@ -108,8 +110,11 @@ class Run(flowws.Stage):
             list(zip(times, [box.Lx, box.Lx*factor])), zero='now')
         Ly = hoomd.variant.linear_interp(
             list(zip(times, [box.Ly, box.Ly*factor])), zero='now')
-        Lz = hoomd.variant.linear_interp(
-            list(zip(times, [box.Lz, box.Lz*factor])), zero='now')
+        if dimensions == 2:
+            Lz = 0
+        else:
+            Lz = hoomd.variant.linear_interp(
+                list(zip(times, [box.Lz, box.Lz*factor])), zero='now')
 
         updater = hoomd.update.box_resize(Lx=Lx, Ly=Ly, Lz=Lz)
         return updater
@@ -135,6 +140,8 @@ class Run(flowws.Stage):
             hoomd.run_upto(scope['cumulative_steps'])
 
 def compute_packing_fraction(scope, storage, snapshot):
+    dimensions = scope.get('dimensions', 3)
+
     type_volumes = []
     for shape in scope.get('type_shapes', []):
         volume = np.polyval(shape['rounding_volume_polynomial'], shape['rounding_radius'])
@@ -142,7 +149,10 @@ def compute_packing_fraction(scope, storage, snapshot):
 
     if not type_volumes:
         logger.warning('No shape information found, assuming particles are spheres with diameter 1')
-        type_volumes = len(snapshot.particles.types)*[4./3*np.pi*0.125]
+        if dimensions == 2:
+            type_volumes = len(snapshot.particles.types)*[np.pi*0.25]
+        else:
+            type_volumes = len(snapshot.particles.types)*[4./3*np.pi*0.125]
 
     type_volumes = np.array(type_volumes, dtype=np.float32)
 
