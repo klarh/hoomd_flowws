@@ -45,17 +45,22 @@ class Init(flowws.Stage):
                     shape['rounding_volume_polynomial'], shape.get('rounding_radius', 0))
                 type_masses.append(particle_density*volume)
 
+                # approximate increase in moment of inertia based on
+                # rounded vs non-rounded volume
+                moment_adjustment = volume/np.polyval(shape['rounding_volume_polynomial'], 0)
+
                 vertices = shape['vertices']
 
                 if len(vertices[0]) == 2:
                     (_, _, inertia_tensor) = hoomd.dem.utils.massProperties(vertices)
-                    type_moments.append((0, 0, inertia_tensor[5]))
+                    moment = np.array((0, 0, inertia_tensor[5]))
+                    type_moments.append(moment*moment_adjustment)
                 else:
                     (vertices, faces) = hoomd.dem.utils.convexHull(vertices)
                     (_, _, inertia_tensor) = hoomd.dem.utils.massProperties(
                         vertices, faces)
-                    type_moments.append(
-                        (inertia_tensor[0], inertia_tensor[3], inertia_tensor[5]))
+                    moment = np.array((inertia_tensor[0], inertia_tensor[3], inertia_tensor[5]))
+                    type_moments.append(moment*moment_adjustment)
         else:
             type_masses = len(type_ratios)*[1]
             type_moments = len(type_ratios)*[(0, 0, 0)]
