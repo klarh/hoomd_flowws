@@ -23,6 +23,10 @@ class ShapeDefinition(flowws.Stage):
     def run(self, scope, storage):
         shape_parameters = self.arguments['shape_parameters']
         type_shapes = [make_shape(params) for params in shape_parameters]
+
+        if type_shapes and len(type_shapes[0]['vertices'][0]) == 2:
+            scope['dimensions'] = 2
+
         scope['type_shapes'] = type_shapes
 
     @classmethod
@@ -52,7 +56,7 @@ class ShapeDefinition(flowws.Stage):
                 elif key == 'unit_volume':
                     modifications.append(dict(type=key))
                 else:
-                    shape[key] = val
+                    shape[key] = val[0]
 
             shapes.append(shape)
 
@@ -76,6 +80,7 @@ class StoreShapeParams(argparse.Action):
 class Shape:
     """Helper class to make shape definitions more succinct"""
     convex_polyhedron_functions = {}
+    polygon_functions = {}
 
     @classmethod
     def convex_polyhedron(cls, function):
@@ -108,16 +113,48 @@ class Shape:
         return result
 
     @classmethod
+    def polygon(cls, function):
+        """Decorator to register a convex polyhedron generator function"""
+        name = function.__name__
+
+        pattern = re.compile(r'^(?P<name>[a-zA-Z_]+)_shape$')
+        match = pattern.match(name)
+
+        assert match, 'polygon-wrapped functions must be named <name>_shape'
+
+        shape_type = match.group('name')
+
+        cls.polygon_functions[shape_type] = function
+        return function
+
+    @classmethod
+    def polygon_shapedef(cls, name, params):
+        """Get a previously-registered convex polyhedron by its name"""
+        shape_info = cls.polygon_functions[name](**params)
+        vertices = np.array(shape_info.vertices, dtype=np.float32).tolist()
+
+        result = dict(
+            type='Polygon', vertices=vertices, rounding_radius=0)
+
+        rmax = np.max(np.linalg.norm(vertices, axis=-1))
+        result['circumsphere_radius'] = rmax
+        result['rounding_volume_polynomial'] = shape_info.rounding_volume_polynomial
+
+        return result
+
+    @classmethod
     def get_shapedef(cls, name, params):
         """Get a previously-registered shape of any type by its name"""
         if name in cls.convex_polyhedron_functions:
             return cls.convex_polyhedron_shapedef(name, params)
+        elif name in cls.polygon_functions:
+            return cls.polygon_shapedef(name, params)
         else:
             raise NotImplementedError()
 
     @classmethod
-    def verify_registered_shapes(cls):
-        """Validate all registered shapes"""
+    def verify_convex_polyhedra(cls):
+        """Validate all registered convex polyhedra"""
         import scipy as sp, scipy.spatial
 
         for name in cls.convex_polyhedron_functions:
@@ -172,6 +209,27 @@ class Shape:
                 print('Computed volume polynomial: {}'.format(volume_polynomial))
                 raise
 
+    @classmethod
+    def verify_polygons(cls):
+        """Validate all registered polygons"""
+        from hoomd.dem import utils
+
+        for name in cls.polygon_functions:
+            shapedef = cls.get_shapedef(name, {})
+            vertices = shapedef['vertices']
+
+            radii = [0.1, 1, 2, 3]
+            volumes = [utils.spheroArea(vertices, r) for r in radii]
+
+            volume_polynomial = np.polyfit(radii, volumes, 2)
+
+            try:
+                assert np.allclose(volume_polynomial, shapedef['rounding_volume_polynomial'])
+            except AssertionError:
+                print(shapedef)
+                print('Computed volume polynomial: {}'.format(volume_polynomial))
+                raise
+
 @Shape.convex_polyhedron
 def cube_shape():
     d = 0.5
@@ -214,6 +272,20 @@ def octahedron_shape():
 
     return ShapeInfo(vertices, volume_poly)
 
+@Shape.polygon
+def regular_ngon_shape(n=3):
+    vertex_distance = np.sqrt(2/n/np.sin(2*np.pi/n))
+    thetas = np.linspace(0, 2*np.pi, n, endpoint=False)
+
+    vertices = vertex_distance*np.array([np.cos(thetas), np.sin(thetas)]).T
+
+    volume = 1
+    surface_area = np.sqrt(4*n*np.tan(np.pi/n))
+
+    volume_poly = [np.pi, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
 def modify_shapedef(shape, modifications):
     for mod in modifications:
         mod_type = mod['type']
@@ -231,9 +303,10 @@ def modify_shapedef(shape, modifications):
             shape['rounding_radius'] = radius
 
         elif mod_type == 'unit_volume':
+            dimensions = len(shape['vertices'][0])
             volume = np.polyval(
                 shape['rounding_volume_polynomial'], shape.get('rounding_radius', 0))
-            factor = volume**(-1./3)
+            factor = volume**(-1./dimensions)
             shape = modify_shapedef(shape, [dict(type='scale', factor=factor)])
 
         else:

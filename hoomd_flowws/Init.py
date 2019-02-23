@@ -49,8 +49,7 @@ class Init(flowws.Stage):
 
                 if len(vertices[0]) == 2:
                     (_, _, inertia_tensor) = hoomd.dem.utils.massProperties(vertices)
-                    type_moments.append(
-                        (inertia_tensor[0], inertia_tensor[3], 0))
+                    type_moments.append((0, 0, inertia_tensor[5]))
                 else:
                     (vertices, faces) = hoomd.dem.utils.convexHull(vertices)
                     (_, _, inertia_tensor) = hoomd.dem.utils.massProperties(

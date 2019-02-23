@@ -111,7 +111,7 @@ class Run(flowws.Stage):
         Ly = hoomd.variant.linear_interp(
             list(zip(times, [box.Ly, box.Ly*factor])), zero='now')
         if dimensions == 2:
-            Lz = 0
+            Lz = box.Lz
         else:
             Lz = hoomd.variant.linear_interp(
                 list(zip(times, [box.Lz, box.Lz*factor])), zero='now')

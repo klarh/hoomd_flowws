@@ -33,6 +33,7 @@ class DEMInteraction(flowws.Stage):
 
         nlist = hoomd.md.nlist.tree()
         system = scope['system']
+        dimensions = scope.get('dimensions', 3)
 
         try:
             type_shapes = scope['type_shapes']
@@ -52,8 +53,12 @@ class DEMInteraction(flowws.Stage):
 
             potential = hoomd.dem.pair.WCA(nlist, radius)
             for (name, shape) in zip(system.particles.types, type_shapes):
-                (vertices, faces) = hoomd.dem.utils.convexHull(shape['vertices'])
-                potential.setParams(name, vertices, faces)
+                vertices = shape['vertices']
+                if dimensions == 2:
+                    potential.setParams(name, vertices)
+                else:
+                    (vertices, faces) = hoomd.dem.utils.convexHull(shape['vertices'])
+                    potential.setParams(name, vertices, faces)
         else:
             raise NotImplementedError(
                 'Unknown Interaction type {}'.format(interaction_type))
