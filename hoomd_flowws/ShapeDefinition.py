@@ -1,3 +1,4 @@
+import argparse
 import collections
 import itertools
 import re
@@ -23,6 +24,54 @@ class ShapeDefinition(flowws.Stage):
         shape_parameters = self.arguments['shape_parameters']
         type_shapes = [make_shape(params) for params in shape_parameters]
         scope['type_shapes'] = type_shapes
+
+    @classmethod
+    def from_command(cls, args):
+        parser = argparse.ArgumentParser(
+            prog=cls.__name__, description=cls.__doc__)
+
+        parser.add_argument('-a', '--shape-arg', action=StoreShapeParams, nargs='*',
+                            default=collections.defaultdict(list),
+                            help='Add a shape argument to the list (ex. -a num_vertices 6 -a scale 2) for '
+                            'a previously-specified shape in the argument list. To '
+                            'specify a new shape, use -a shape <shapeName>.')
+
+        args = parser.parse_args(args)
+
+        shapes = []
+        for type_index in list(sorted(args.shape_arg)):
+            modifications = []
+            shape = dict(modifications=modifications)
+            for (key, val) in args.shape_arg[type_index]:
+                if key == 'shape':
+                    shape['type'] = val
+                elif key == 'scale':
+                    modifications.append(dict(type=key, factor=val[0]))
+                elif key == 'round':
+                    modifications.append(dict(type=key, radius=val[0]))
+                elif key == 'unit_volume':
+                    modifications.append(dict(type=key))
+                else:
+                    shape[key] = val
+
+            shapes.append(shape)
+
+        return cls(shape_parameters=shapes)
+
+class StoreShapeParams(argparse.Action):
+    """argparse action to store shape parameters to allow for multiple
+    shapes in the command line"""
+    def __init__(self, *args, **kwargs):
+        self._curType = -1
+        super(StoreShapeParams, self).__init__(*args, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values[0] == 'shape':
+            self._curType += 1
+            namespace.shape_arg[self._curType].append(tuple(values))
+        else:
+            rest = [eval(v) for v in values[1:]]
+            namespace.shape_arg[self._curType].append((values[0], rest))
 
 class Shape:
     """Helper class to make shape definitions more succinct"""
@@ -182,7 +231,7 @@ def modify_shapedef(shape, modifications):
 def make_shape(shape_params):
     shape_params = dict(shape_params)
 
-    shape_name = shape_params.pop('name')
+    shape_name = shape_params.pop('type')
     modifications = shape_params.pop('modifications', [])
 
     base_shape = Shape.get_shapedef(shape_name, shape_params)
