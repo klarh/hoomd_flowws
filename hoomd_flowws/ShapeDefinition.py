@@ -5,6 +5,7 @@ import re
 
 import numpy as np
 import flowws
+from flowws import Argument as Arg
 
 import hoomd.dem
 
@@ -12,70 +13,52 @@ import hoomd.dem
 ShapeInfo = collections.namedtuple(
     'ShapeInfo', ['vertices', 'rounding_volume_polynomial'])
 
+class ShapedefArgument(Arg):
+    """Specialized Argument object to parse shape definition inputs"""
+
+    SHAPE_ARG_DOC = """List of per-shape specifications and modifiers."""
+    CMD_SHAPE_ARG_DOC = """Key-value pairs of shape arguments, specified for a given shape. To
+    begin specifying a new shape, use `-a shape <shapeName>`. Valid
+    arguments can include shape-specific arguments (if a shape take a
+    num_vertices argument, for example, `-a num_vertices 6`) or generic
+    arguments (`-a scale 2 -a round 0.25`)."""
+
+    def __init__(self):
+        super(ShapedefArgument, self).__init__(
+            'shape_arguments', '-a', [{}], help=self.SHAPE_ARG_DOC,
+            cmd_type=[(str, [eval])], cmd_help=self.CMD_SHAPE_ARG_DOC)
+
+    def validate_cmd(self, value):
+        # convert result into a list of dictionaries
+        result = []
+
+        for (key, vals) in value:
+            if key == 'shape':
+                result.append(dict(type=vals, modifications=[]))
+            elif key == 'scale':
+                result[-1]['modifications'].append(dict(type=key, factor=float(vals[0])))
+            elif key == 'round':
+                result[-1]['modifications'].append(dict(type=key, radius=float(vals[0])))
+            elif key == 'unit_volume':
+                result[-1]['modifications'].append(dict(type=key))
+            else:
+                results[-1][key] = vals[0]
+
+        return result
+
 class ShapeDefinition(flowws.Stage):
-    ARGS = list(itertools.starmap(
-        flowws.Stage.ArgumentSpecification,
-        [
-            ('shape_parameters', eval, None, 'Per-type shape definitions and parameters'),
-        ]
-    ))
+    ARGS = [
+        ShapedefArgument(),
+    ]
 
     def run(self, scope, storage):
-        shape_parameters = self.arguments['shape_parameters']
-        type_shapes = [make_shape(params) for params in shape_parameters]
+        shape_arguments = self.arguments['shape_arguments']
+        type_shapes = [make_shape(params) for params in shape_arguments]
 
         if type_shapes and len(type_shapes[0]['vertices'][0]) == 2:
             scope['dimensions'] = 2
 
         scope['type_shapes'] = type_shapes
-
-    @classmethod
-    def from_command(cls, args):
-        parser = argparse.ArgumentParser(
-            prog=cls.__name__, description=cls.__doc__)
-
-        parser.add_argument('-a', '--shape-arg', action=StoreShapeParams, nargs='*',
-                            default=collections.defaultdict(list),
-                            help='Add a shape argument to the list (ex. -a num_vertices 6 -a scale 2) for '
-                            'a previously-specified shape in the argument list. To '
-                            'specify a new shape, use -a shape <shapeName>.')
-
-        args = parser.parse_args(args)
-
-        shapes = []
-        for type_index in list(sorted(args.shape_arg)):
-            modifications = []
-            shape = dict(modifications=modifications)
-            for (key, val) in args.shape_arg[type_index]:
-                if key == 'shape':
-                    shape['type'] = val
-                elif key == 'scale':
-                    modifications.append(dict(type=key, factor=val[0]))
-                elif key == 'round':
-                    modifications.append(dict(type=key, radius=val[0]))
-                elif key == 'unit_volume':
-                    modifications.append(dict(type=key))
-                else:
-                    shape[key] = val[0]
-
-            shapes.append(shape)
-
-        return cls(shape_parameters=shapes)
-
-class StoreShapeParams(argparse.Action):
-    """argparse action to store shape parameters to allow for multiple
-    shapes in the command line"""
-    def __init__(self, *args, **kwargs):
-        self._curType = -1
-        super(StoreShapeParams, self).__init__(*args, **kwargs)
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        if values[0] == 'shape':
-            self._curType += 1
-            namespace.shape_arg[self._curType].append(tuple(values))
-        else:
-            rest = [eval(v) for v in values[1:]]
-            namespace.shape_arg[self._curType].append((values[0], rest))
 
 class Shape:
     """Helper class to make shape definitions more succinct"""

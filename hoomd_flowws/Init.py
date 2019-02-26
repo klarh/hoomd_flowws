@@ -1,20 +1,21 @@
 import itertools
 
-from .internal import HoomdContext
+from .internal import HoomdContext, intfloat
 import hoomd
 import hoomd.dem
 import flowws
+from flowws import Argument as Arg
 import numpy as np
 
 class Init(flowws.Stage):
-    ARGS = list(itertools.starmap(
-        flowws.Stage.ArgumentSpecification,
-        [
-            ('number', int, None, 'Number of particles to simulate'),
-            ('mass_scale', float, 1, 'Scaling factor for mass of all particles'),
-            ('type_ratios', eval, [], 'Prevalence of each particle type')
-        ]
-    ))
+    ARGS = [
+        Arg('number', '-n', intfloat, required=True,
+            help='Number of particles to simulate'),
+        Arg('mass_scale', None, float, 1,
+            help='Scaling factor for mass of all particles'),
+        Arg('type_ratios', '-t', [float],
+            help='Prevalence (ratio) of each particle type'),
+    ]
 
     def run(self, scope, storage):
         # factor to scale initial particle distance by

@@ -1,4 +1,5 @@
 import contextlib
+import os
 
 import hoomd
 import flowws
@@ -13,8 +14,13 @@ class RestoreStateContext:
         self.storage = storage
         self.restore = restore
 
+    def get_backup_filename(self):
+        dump_filename = self.scope.get('dump_filename', 'dump.sqlite')
+        (dump_stem, _) = os.path.splitext(dump_filename)
+        return '.'.join((dump_stem, 'backup', 'tar'))
+
     def try_restoring(self):
-        restore_filename = self.scope.get('restore_filename', 'backup.tar')
+        restore_filename = self.get_backup_filename()
 
         with self.storage.open(restore_filename, 'rb', on_filesystem=True) as f:
             system = hoomd.init.read_getar(f.name)
@@ -22,7 +28,7 @@ class RestoreStateContext:
 
     def try_saving(self):
         if self.scope is not None:
-            restore_filename = self.scope.get('restore_filename', 'backup.tar')
+            restore_filename = self.get_backup_filename()
             with self.storage.open(restore_filename, 'wb', on_filesystem=True) as f:
                 hoomd.dump.getar.immediate(f.name, [], dynamic=['all'])
 
@@ -59,6 +65,9 @@ class HoomdContext(contextlib.ExitStack):
             self.cancel_saving()
 
         return passed
+
+    def get_backup_filename(self):
+        return self.restore_context.get_backup_filename()
 
     def try_restoring(self):
         return self.restore_context.try_restoring()

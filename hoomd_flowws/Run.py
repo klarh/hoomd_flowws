@@ -8,27 +8,37 @@ from .internal import intfloat, HoomdContext
 import hoomd
 import hoomd.md
 import flowws
+from flowws import Argument as Arg
 
 logger = logging.getLogger(__name__)
 
 class Run(flowws.Stage):
-    ARGS = list(itertools.starmap(
-        flowws.Stage.ArgumentSpecification,
-        [
-            ('steps', intfloat, None, 'Number of timesteps to run'),
-            ('timestep_size', float, .005, 'Timestep size'),
-            ('integrator', str, None, 'Integrator type'),
-            ('temperature', float, 1, 'Temperature for isothermal simulations'),
-            ('tau_t', float, 1, 'Thermostat time constant for isothermal simulations'),
-            ('pressure', float, 1, 'Pressure for isobaric simulations'),
-            ('tau_p', float, 10, 'Barostat time constant for isobaric simulations'),
-            ('bd_seed', int, 12, 'Random number seed for Brownian/Langevin thermostats'),
-            ('backup_period', intfloat, 0, 'Period for dumping a backup file'),
-            ('dump_period', intfloat, 0, 'Period for dumping a trajectory file'),
-            ('expand_by', float, None, 'Expand each dimension of the box by this ratio during this stage'),
-            ('compress_to', float, None, 'Compress to the given packing fraction during this stage (overrides expand_by)'),
-        ]
-    ))
+    ARGS = [
+        Arg('steps', '-s', intfloat, None,
+            help='Number of timesteps to run'),
+        Arg('timestep_size', None, float, 0.005,
+            help='Timestep size'),
+        Arg('integrator', None, str, required=True,
+            help='Integrator type'),
+        Arg('temperature', None, float, 1,
+            help='Temperature for isothermal simulations'),
+        Arg('tau_t', None, float, 1,
+            help='Thermostat time constant for isothermal simulations'),
+        Arg('pressure', None, float, 1,
+            help='Pressure for isobaric simulations'),
+        Arg('tau_p', None, float, 10,
+            help='Barostat time constant for isobaric simulations'),
+        Arg('bd_seed', None, int, 12,
+            help='Random number seed for Brownian/Langevin thermostats'),
+        Arg('backup_period', '-b', intfloat, 0,
+            help='Period for dumping a backup file'),
+        Arg('dump_period', '-d', intfloat, 0,
+            help='Period for dumping a trajectory file'),
+        Arg('expand_by', None, float,
+            help='Expand each dimension of the box by this ratio during this stage'),
+        Arg('compress_to', None, float,
+            help='Compress to the given packing fraction during this stage (overrides expand_by)'),
+    ]
 
     def setup_integrator(self, scope, storage):
         integrator_type = self.arguments['integrator']
@@ -67,7 +77,7 @@ class Run(flowws.Stage):
 
     def setup_dumps(self, scope, storage, context):
         if self.arguments['backup_period']:
-            backup_filename = scope.get('restore_filename', 'backup.tar')
+            backup_filename = context.get_backup_filename()
             backup_file = context.enter_context(
                 storage.open(backup_filename, 'wb', on_filesystem=True))
             hoomd.dump.getar.simple(

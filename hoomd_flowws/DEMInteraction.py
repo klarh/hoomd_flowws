@@ -6,17 +6,17 @@ import numpy as np
 
 import hoomd.dem
 import flowws
+from flowws import Argument as Arg
 
 logger = logging.getLogger(__name__)
 
 class DEMInteraction(flowws.Stage):
-    ARGS = list(itertools.starmap(
-        flowws.Stage.ArgumentSpecification,
-        [
-            ('reset', bool, False, 'Clear previously-defined DEM interactions beforehand'),
-            ('type', str, None, 'Interaction class name'),
-        ]
-    ))
+    ARGS = [
+        Arg('reset', '-r', bool, False,
+            help='Clear previously-defined DEM interactions beforehand'),
+        Arg('type', '-t', str, required=True,
+            help='Interaction class name'),
+    ]
 
     def run(self, scope, storage):
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
