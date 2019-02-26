@@ -32,7 +32,6 @@ class Interaction(flowws.Stage):
 
     def __call__(self, scope, storage):
         interaction_type = self.arguments['type']
-        params = dict(self.arguments['params'])
 
         nlist = hoomd.md.nlist.tree()
         system = scope['system']
@@ -44,7 +43,7 @@ class Interaction(flowws.Stage):
 
             pair_params = collections.defaultdict(dict)
 
-            for (a, b), name, value in self.arguments['pair_params']:
+            for a, b, name, value in self.arguments['pair_params']:
                 if a == '_':
                     a = system.particles.types
                 if b == '_':
