@@ -36,13 +36,13 @@ class ShapedefArgument(Arg):
             if key == 'shape':
                 result.append(dict(type=vals, modifications=[]))
             elif key == 'scale':
-                result[-1]['modifications'].append(dict(type=key, factor=float(vals[0])))
+                result[-1]['modifications'].append(dict(type=key, factor=float(vals)))
             elif key == 'round':
-                result[-1]['modifications'].append(dict(type=key, radius=float(vals[0])))
+                result[-1]['modifications'].append(dict(type=key, radius=float(vals)))
             elif key == 'unit_volume':
                 result[-1]['modifications'].append(dict(type=key))
             else:
-                results[-1][key] = vals[0]
+                results[-1][key] = eval(vals)
 
         return result
 
