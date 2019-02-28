@@ -10,7 +10,9 @@ from flowws import Argument as Arg
 
 logger = logging.getLogger(__name__)
 
+@flowws.add_stage_arguments
 class DEMInteraction(flowws.Stage):
+    """Specify that DEM interactions should be included in future MD stages"""
     ARGS = [
         Arg('reset', '-r', bool, False,
             help='Clear previously-defined DEM interactions beforehand'),
@@ -19,6 +21,7 @@ class DEMInteraction(flowws.Stage):
     ]
 
     def run(self, scope, storage):
+        """Registers this object to provide a DEM force compute in future MD stages"""
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
 
         if self.arguments['reset']:
@@ -29,6 +32,11 @@ class DEMInteraction(flowws.Stage):
         callbacks['pre_run'].append(self)
 
     def __call__(self, scope, storage):
+        """Callback to be performed before each run command.
+
+        Initializes a DEM pair potential interaction based on per-type
+        shape information.
+        """
         interaction_type = self.arguments['type']
 
         nlist = hoomd.md.nlist.tree()

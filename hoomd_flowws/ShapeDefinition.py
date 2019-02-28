@@ -46,7 +46,25 @@ class ShapedefArgument(Arg):
 
         return result
 
+@flowws.add_stage_arguments
 class ShapeDefinition(flowws.Stage):
+    """Define per-type shapes for future stages to utilize
+
+    Shape information is used for visualization, packing fraction
+    calculations, and pair force/HPMC integrator configuration.
+
+    Shapes consist of a base type, any parameters of the shape, and
+    modifiers. For example::
+
+        # regular polygon with 4 vertices (square)
+        shape = dict(type='regular_ngon', n=4,
+                     modifiers=[dict(type='scale', factor=2)])
+        # rounded tetrahedron
+        shape = dict(type='tetrahedron',
+                     modifiers=[dict(type='round', radius=0.5)])
+        ShapeDefinition(shape_arguments=[shape])
+
+    """
     ARGS = [
         ShapedefArgument(),
     ]

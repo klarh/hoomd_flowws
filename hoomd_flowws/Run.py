@@ -12,7 +12,9 @@ from flowws import Argument as Arg
 
 logger = logging.getLogger(__name__)
 
+@flowws.add_stage_arguments
 class Run(flowws.Stage):
+    """Run for a given number of timesteps using MD"""
     ARGS = [
         Arg('steps', '-s', intfloat, None,
             help='Number of timesteps to run'),

@@ -6,7 +6,9 @@ import hoomd
 import flowws
 from flowws import Argument as Arg
 
+@flowws.add_stage_arguments
 class Interaction(flowws.Stage):
+    """Specify a new interaction potential to include in future MD stages"""
     ARGS = [
         Arg('reset', '-r', bool, False,
             help='Clear previously-defined interactions beforehand'),
@@ -21,6 +23,7 @@ class Interaction(flowws.Stage):
     ]
 
     def run(self, scope, storage):
+        """Registers this object to provide a DEM force compute in future MD stages"""
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
 
         if self.arguments['reset']:
@@ -31,6 +34,11 @@ class Interaction(flowws.Stage):
         callbacks['pre_run'].append(self)
 
     def __call__(self, scope, storage):
+        """Callback to be performed before each run command.
+
+        Initializes a DEM pair potential interaction based on per-type
+        shape information.
+        """
         interaction_type = self.arguments['type']
 
         nlist = hoomd.md.nlist.tree()

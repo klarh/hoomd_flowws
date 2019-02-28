@@ -7,7 +7,12 @@ import flowws
 from flowws import Argument as Arg
 import numpy as np
 
+@flowws.add_stage_arguments
 class Init(flowws.Stage):
+    """Initialize a system
+
+    Currently simply places points on a simple cubic lattice.
+    """
     ARGS = [
         Arg('number', '-n', intfloat, required=True,
             help='Number of particles to simulate'),

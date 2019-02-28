@@ -13,7 +13,9 @@ from . import Run
 
 logger = logging.getLogger(__name__)
 
+@flowws.add_stage_arguments
 class RunHPMC(Run):
+    """Run for some number of steps using HPMC"""
     ARGS = [
         Arg('steps', '-s', intfloat, None, required=True,
             help='Number of timesteps to run'),
