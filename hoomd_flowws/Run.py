@@ -79,7 +79,8 @@ class Run(flowws.Stage):
         if self.arguments['backup_period']:
             backup_filename = context.get_backup_filename()
             backup_file = context.enter_context(
-                storage.open(backup_filename, 'wb', on_filesystem=True))
+                storage.open(backup_filename, 'wb', on_filesystem=True,
+                             noop=scope['mpi_rank']))
             hoomd.dump.getar.simple(
                 backup_file.name,  self.arguments['backup_period'], '1',
                 static=[], dynamic=['all'])
@@ -87,7 +88,8 @@ class Run(flowws.Stage):
         if self.arguments['dump_period']:
             dump_filename = scope.get('dump_filename', 'dump.sqlite')
             dump_file = context.enter_context(
-                storage.open(dump_filename, 'ab', on_filesystem=True))
+                storage.open(dump_filename, 'ab', on_filesystem=True,
+                             noop=scope['mpi_rank']))
 
             dynamic_quantities = (
                 ['viz_aniso_dynamic'] if 'type_shapes' in scope else ['viz_dynamic'])

@@ -2,6 +2,7 @@ import contextlib
 import os
 
 import hoomd
+import hoomd.comm
 import flowws
 
 def intfloat(x):
@@ -22,14 +23,18 @@ class RestoreStateContext:
     def try_restoring(self):
         restore_filename = self.get_backup_filename()
 
-        with self.storage.open(restore_filename, 'rb', on_filesystem=True) as f:
+        with self.storage.open(
+                restore_filename, 'rb', on_filesystem=True,
+                noop=self.scope['mpi_rank']) as f:
             system = hoomd.init.read_getar(f.name)
         return system
 
     def try_saving(self):
         if self.scope is not None:
             restore_filename = self.get_backup_filename()
-            with self.storage.open(restore_filename, 'wb', on_filesystem=True) as f:
+            with self.storage.open(
+                    restore_filename, 'wb', on_filesystem=True,
+                    noop=self.scope['mpi_rank']) as f:
                 hoomd.dump.getar.immediate(f.name, [], dynamic=['all'])
 
     def __enter__(self, *args, **kwargs):
@@ -52,6 +57,7 @@ class HoomdContext(contextlib.ExitStack):
 
         self.hoomd_context = self.enter_context(
             hoomd.context.initialize(self.context_args))
+        self.scope['mpi_rank'] = hoomd.comm.get_rank()
         self.restore_context = self.enter_context(
             RestoreStateContext(scope, storage, restore))
 
