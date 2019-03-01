@@ -1,6 +1,7 @@
 import collections
 import itertools
 import logging
+import os
 
 import numpy as np
 
@@ -36,6 +37,8 @@ class Run(flowws.Stage):
             help='Period for dumping a backup file'),
         Arg('dump_period', '-d', intfloat, 0,
             help='Period for dumping a trajectory file'),
+        Arg('dump_quantities', '-q', (intfloat, str),
+            help='Dump period and comma-separated list of quantities to record (i.e. temperature,pressure)'),
         Arg('expand_by', None, float,
             help='Expand each dimension of the box by this ratio during this stage'),
         Arg('compress_to', None, float,
@@ -86,6 +89,19 @@ class Run(flowws.Stage):
             hoomd.dump.getar.simple(
                 backup_file.name,  self.arguments['backup_period'], '1',
                 static=[], dynamic=['all'])
+
+        if self.arguments.get('dump_quantities', None):
+            dump_filename = scope.get('dump_filename', 'dump.sqlite')
+            dump_filename = '.'.join(
+                (os.path.splitext(dump_filename)[0], 'quantities', 'log'))
+            (period, quantities) = self.arguments['dump_quantities']
+            quantities = [q.strip() for q in quantities.split(',')]
+
+            log_file = context.enter_context(
+                storage.open(dump_filename, 'ab', on_filesystem=True,
+                             noop=scope['mpi_rank']))
+
+            hoomd.analyze.log(log_file.name, quantities, period)
 
         if self.arguments['dump_period']:
             dump_filename = scope.get('dump_filename', 'dump.sqlite')
