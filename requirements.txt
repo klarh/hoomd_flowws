@@ -1,2 +1,2 @@
-git+https://github.com/klarh/hoomd_flowws.git#egg=hoomd_flowws
+git+https://github.com/klarh/flowws.git#egg=flowws
 .
