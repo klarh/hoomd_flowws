@@ -27,7 +27,7 @@ setup(name='hoomd_flowws',
       },
       extras_require={},
       install_requires=['flowws'],
-      license='BSD',
+      license='MIT',
       packages=[
           'hoomd_flowws',
       ],
