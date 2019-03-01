@@ -19,10 +19,18 @@ composed to perform most common workflows.
 Install hoomd_flowws from source using `pip`:
 
 ```
-# install flowws first
-git clone https://github.com/klarh/flowws
-pip install flowws
+pip install git+https://github.com/klarh/flowws.git#egg=flowws
+pip install git+https://github.com/klarh/hoomd_flowws.git#egg=hoomd_flowws
+```
 
+## Documentation
+
+Browse more detailed documentation
+[online](https://hoomd_flowws.readthedocs.io) or build the sphinx
+documentation from source:
+
+```
 git clone https://github.com/klarh/hoomd_flowws
-pip install hoomd_flowws
+cd hoomd_flowws/doc
+make html
 ```
