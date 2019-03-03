@@ -53,10 +53,12 @@ class HoomdContext(contextlib.ExitStack):
         self.storage = storage
         self.cached_snapshot_ = None
 
-        self.context_args = self.scope.get('hoomd_context_args', '')
+        if hoomd.context.current is None:
+            context_args = scope.get('hoomd_context_args', '')
+            hoomd.context.initialize(context_args)
 
         self.hoomd_context = self.enter_context(
-            hoomd.context.initialize(self.context_args))
+            hoomd.context.SimulationContext())
         self.scope['mpi_rank'] = hoomd.comm.get_rank()
         self.restore_context = self.enter_context(
             RestoreStateContext(scope, storage, restore))
