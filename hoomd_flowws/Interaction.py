@@ -33,7 +33,7 @@ class Interaction(flowws.Stage):
 
         callbacks['pre_run'].append(self)
 
-    def __call__(self, scope, storage):
+    def __call__(self, scope, storage, context):
         """Callback to be performed before each run command.
 
         Initializes a DEM pair potential interaction based on per-type

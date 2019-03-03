@@ -45,7 +45,7 @@ class Run(flowws.Stage):
             help='Compress to the given packing fraction during this stage (overrides expand_by)'),
     ]
 
-    def setup_integrator(self, scope, storage):
+    def setup_integrator(self, scope, storage, context):
         integrator_type = self.arguments['integrator']
 
         if integrator_type == 'nve':
@@ -149,6 +149,9 @@ class Run(flowws.Stage):
         updater = hoomd.update.box_resize(Lx=Lx, Ly=Ly, Lz=Lz)
         return updater
 
+    def run_steps(self, scope, storage, context):
+        hoomd.run_upto(scope['cumulative_steps'])
+
     def run(self, scope, storage):
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
         scope['cumulative_steps'] = (scope.get('cumulative_steps', 0) +
@@ -158,16 +161,19 @@ class Run(flowws.Stage):
             if ctx.check_timesteps():
                 return
 
-            self.setup_integrator(scope, storage)
+            self.setup_integrator(scope, storage, ctx)
 
             self.setup_dumps(scope, storage, ctx)
 
             self.setup_compression(scope, storage, ctx)
 
             for c in callbacks['pre_run']:
-                c(scope, storage)
+                c(scope, storage, ctx)
 
-            hoomd.run_upto(scope['cumulative_steps'])
+            self.run_steps(scope, storage, ctx)
+
+            for c in callbacks['post_run']:
+                c(scope, storage, ctx)
 
 def compute_packing_fraction(scope, storage, snapshot):
     dimensions = scope.get('dimensions', 3)
