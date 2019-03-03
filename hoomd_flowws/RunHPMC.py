@@ -77,14 +77,18 @@ class RunHPMC(Run):
             if max(rounding_radii) > 0:
                 integrator = hoomd.hpmc.integrate.convex_spheropolyhedron(
                     self.arguments['integrator_seed'])
+
+                for (typ, shape) in zip(particle_types, type_shapes):
+                    integrator.shape_param.set(
+                        typ, vertices=shape['vertices'],
+                        sweep_radius=shape.get('rounding_radius', 0))
             else:
                 integrator = hoomd.hpmc.integrate.convex_polyhedron(
                     self.arguments['integrator_seed'])
 
-            for (typ, shape) in zip(particle_types, type_shapes):
-                integrator.shape_param.set(
-                    typ, vertices=shape['vertices'],
-                    sweep_radius=shape.get('rounding_radius', 0))
+                for (typ, shape) in zip(particle_types, type_shapes):
+                    integrator.shape_param.set(
+                        typ, vertices=shape['vertices'])
 
         if integrator_type == 'nvt':
             pass # integrators are nvt by default
