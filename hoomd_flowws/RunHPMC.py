@@ -127,6 +127,7 @@ class RunHPMC(Run):
 
         # per-type move distance arrays for translation/rotation/box
         distances = {}
+        frame = -1
 
         dump_filename = scope.get('dump_filename', 'dump.sqlite')
         local_context = contextlib.ExitStack()
@@ -134,9 +135,9 @@ class RunHPMC(Run):
             try:
                 dump_file = local_context.enter_context(storage.open(
                     dump_filename, 'rb', on_filesystem=True, noop=scope['mpi_rank']))
-            except FileNotFoundError:
+                traj = local_context.enter_context(gtar.GTAR(dump_file.name, 'r'))
+            except (FileNotFoundError, RuntimeError):
                 return -1, {}
-            traj = local_context.enter_context(gtar.GTAR(dump_file.name, 'r'))
 
             # grab per-type distance arrays
             for (frame, trans) in traj.recordsNamed('type_translation_distance'):
