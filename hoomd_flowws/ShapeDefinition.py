@@ -194,7 +194,7 @@ class Shape:
             for (vi, vj), (si, sj) in all_edges.items():
                 length = np.linalg.norm(hull.points[vi] - hull.points[vj])
                 dot_product = np.dot(hull.equations[si, :3], hull.equations[sj, :3])
-                angle = 2*np.pi - np.arccos(dot_product)
+                angle = np.arccos(dot_product)
 
                 volume_polynomial[1] += 0.5*length*angle
 
@@ -238,7 +238,7 @@ def cube_shape():
 
     volume = 1
     surface_area = 6
-    weighted_edge_length = 9*np.pi
+    weighted_edge_length = 3*np.pi
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
 
@@ -252,7 +252,7 @@ def tetrahedron_shape():
 
     volume = 1
     surface_area = 6*3.**(1./6)
-    weighted_edge_length = 26.75541247
+    weighted_edge_length = 11.69106268
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
 
@@ -267,7 +267,7 @@ def octahedron_shape():
 
     volume = 1
     surface_area = 3*48**(1./6)
-    weighted_edge_length = 38.94957767
+    weighted_edge_length = 9.48994571
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
 
