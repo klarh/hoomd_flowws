@@ -14,6 +14,8 @@ from . import Run
 
 logger = logging.getLogger(__name__)
 
+BOX_MOVE_NAMES = ['aspect', 'length', 'shear', 'volume', 'ln_volume']
+
 @flowws.add_stage_arguments
 class RunHPMC(Run):
     """Run for some number of steps using HPMC"""
@@ -22,7 +24,7 @@ class RunHPMC(Run):
             help='Number of timesteps to run'),
         Arg('integrator', '-i', str, None, required=True,
             help='Integrator type'),
-        Arg('pressure', None, float,
+        Arg('pressure', None, float, 1,
             help='Pressure for isobaric simulations'),
         Arg('backup_period', '-b', intfloat, 0,
             help='Period for dumping a backup file'),
@@ -38,7 +40,17 @@ class RunHPMC(Run):
             metavar=('acceptance_ratio', 'epochs', 'steps'),
             help='Tune move distances to achieve the target acceptance ratio '
             'after updating a given number of epochs and running the given '
-            'number of steps at each epoch')
+            'number of steps at each epoch'),
+        Arg('box_move_aspect', None, (float, float), metavar=('distance', 'weight'),
+            help='Move distance and weight for box aspect ratio moves'),
+        Arg('box_move_length', None, (float, float), metavar=('distance', 'weight'),
+            help='Move distance and weight for box length moves'),
+        Arg('box_move_ln_volume', None, (float, float), metavar=('distance', 'weight'),
+            help='Move distance and weight for box log-volume moves'),
+        Arg('box_move_shear', None, (float, float), metavar=('distance', 'weight'),
+            help='Move distance and weight for box shear moves'),
+        Arg('box_move_volume', None, (float, float), metavar=('distance', 'weight'),
+            help='Move distance and weight for box volume moves'),
     ]
 
     def setup_integrator(self, scope, storage, context):
@@ -95,7 +107,9 @@ class RunHPMC(Run):
         else:
             raise NotImplementedError(integrator_type)
 
-        frame, _ = self.load_move_distance(scope, storage, context, integrator)
+        updater = self.setup_box_updater(scope, storage, context, integrator)
+
+        frame, _ = self.load_move_distance(scope, storage, context, integrator, updater)
         # we should only create a tuner object if we haven't already
         # done tuning for this stage
         can_tune = frame < scope['cumulative_steps'] - self.arguments['steps']
@@ -117,12 +131,32 @@ class RunHPMC(Run):
 
             # now the tuned move distances have been saved, so we can
             # retrieve them for this stage
-            self.load_move_distance(scope, storage, context, integrator)
+            self.load_move_distance(scope, storage, context, integrator, updater)
 
         scope['integrator'] = integrator
+
         return integrator
 
-    def load_move_distance(self, scope, storage, context, integrator):
+    def setup_box_updater(self, scope, storage, context, integrator):
+        should_create = any(self.arguments.get('box_move_{}'.format(name), False)
+                            for name in BOX_MOVE_NAMES)
+        updater = None
+        if should_create:
+            updater = hoomd.hpmc.update.boxmc(
+                integrator, self.arguments['pressure'],
+                self.arguments['integrator_seed'] + 20)
+
+            for name in BOX_MOVE_NAMES:
+                if 'box_move_{}'.format(name) not in self.arguments:
+                    continue
+                (distance, weight) = self.arguments['box_move_{}'.format(name)]
+                getattr(updater, name)(delta=distance, weight=weight)
+
+            scope['box_updater'] = updater
+
+        return updater
+
+    def load_move_distance(self, scope, storage, context, integrator, updater):
         import gtar
 
         # per-type move distance arrays for translation/rotation/box
@@ -154,6 +188,16 @@ class RunHPMC(Run):
                 else:
                     break
 
+            for name in BOX_MOVE_NAMES:
+                box_name = 'box_{}'.format(name)
+                distance_name = '{}_distance'.format(box_name)
+                for (frame, rot) in traj.recordsNamed(distance_name):
+                    if int(frame) <= scope['cumulative_steps']:
+                        distances[box_name] = rot
+                        frame = int(frame)
+                    else:
+                        break
+
         if distances:
             types = context.snapshot.particles.types
             kwargs = dict()
@@ -165,6 +209,11 @@ class RunHPMC(Run):
                 kwargs['a'] = dict(zip(types, distances['rotation']))
 
             integrator.set_params(**kwargs)
+
+            for (key, distance) in distances.items():
+                if key.startswith('box_') and updater is not None:
+                    name = key[4:]
+                    getattr(updater, name)(delta=distance)
 
         msg = 'Loaded tuned move distances from {} for frame {}: {}'.format(
             dump_filename, frame, distances)
@@ -201,9 +250,28 @@ class TuneHPMC(RunHPMC):
         tuner = hoomd.hpmc.util.tune(
             integrator, tunables, target=acceptance_ratio)
 
+        box_tuner = None
+        updater = scope.get('box_updater', None)
+        if updater is not None:
+            tunable_map = dict(
+                length=['dLx', 'dLy', 'dLz'],
+                volume=['dV'],
+                ln_volume=['dlnV'],
+                shear=['dxy', 'dxz', 'dyz'],
+                aspect=[] # aspect tuning is not builtin
+            )
+            tunables = sum(
+                (tunable_map[name] for name in BOX_MOVE_NAMES if
+                 'box_move_{}'.format(name) in self.arguments), [])
+            box_tuner = hoomd.hpmc.util.tune_npt(
+                updater, tunables, target=acceptance_ratio)
+
         for epoch in range(epochs):
             hoomd.run(steps_per_epoch)
             tuner.update()
+
+            if box_tuner is not None:
+                box_tuner.update()
 
         self.save_tune_results(scope, storage, context)
 
@@ -224,6 +292,12 @@ class TuneHPMC(RunHPMC):
             translation.append(integrator.get_d(t))
             rotation.append(integrator.get_a(t))
 
+        updater = scope.get('box_updater', None)
+        box_distances = {}
+        if updater is not None:
+            for name in BOX_MOVE_NAMES:
+                box_distances[name] = getattr(updater, name)()['delta']
+
         dump_filename = scope.get('dump_filename', 'dump.sqlite')
 
         msg = 'Dumping tuned move distances to {}: translation {}, rotation {}'.format(
@@ -240,6 +314,11 @@ class TuneHPMC(RunHPMC):
             getar_file.writePath(path, translation)
             path = 'hpmc/frames/{}/type_rotation_distance.f32.uni'.format(beginning_steps)
             getar_file.writePath(path, rotation)
+
+            for (key, value) in box_distances.items():
+                path = 'hpmc/frames/{}/box_{}_distance.f32.uni'.format(
+                    beginning_steps, key)
+                getar_file.writePath(path, value)
 
 def is_concave(polygon):
     vertices = np.array(polygon['vertices'], dtype=np.float32)
