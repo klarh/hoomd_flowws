@@ -103,7 +103,13 @@ class RunHPMC(Run):
                         typ, vertices=shape['vertices'])
 
         if integrator_type == 'nvt':
-            pass # integrators are nvt by default
+            if any('box_move_{}'.format(name) in self.arguments
+                   for name in ['length', 'volume', 'ln_volume']):
+                raise ArgumentError('NVT integration mode specified, but box moves were also enabled')
+        elif integrator_type == 'npt':
+            if all('box_move_{}'.format(name) not in self.arguments
+                   for name in ['length', 'volume', 'ln_volume']):
+                raise ArgumentError('Must enable box moves for NPT simulations')
         else:
             raise NotImplementedError(integrator_type)
 
@@ -140,6 +146,8 @@ class RunHPMC(Run):
     def setup_box_updater(self, scope, storage, context, integrator):
         should_create = any(self.arguments.get('box_move_{}'.format(name), False)
                             for name in BOX_MOVE_NAMES)
+        should_create |= self.arguments['integrator'] == 'npt'
+
         updater = None
         if should_create:
             updater = hoomd.hpmc.update.boxmc(
