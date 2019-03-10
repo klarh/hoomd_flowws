@@ -232,19 +232,6 @@ class Shape:
                 raise
 
 @Shape.convex_polyhedron
-def cube_shape():
-    d = 0.5
-    vertices = list(itertools.product([-d, d], [-d, d], [-d, d]))
-
-    volume = 1
-    surface_area = 6
-    weighted_edge_length = 3*np.pi
-
-    volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
-
-    return ShapeInfo(vertices, volume_poly)
-
-@Shape.convex_polyhedron
 def tetrahedron_shape():
     d = (8./3)**(-1./3)
     vertices = [(d, d, d), (d, -d, -d),
@@ -253,6 +240,19 @@ def tetrahedron_shape():
     volume = 1
     surface_area = 6*3.**(1./6)
     weighted_edge_length = 11.69106268
+
+    volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
+@Shape.convex_polyhedron
+def cube_shape():
+    d = 0.5
+    vertices = list(itertools.product([-d, d], [-d, d], [-d, d]))
+
+    volume = 1
+    surface_area = 6
+    weighted_edge_length = 3*np.pi
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
 
@@ -268,6 +268,45 @@ def octahedron_shape():
     volume = 1
     surface_area = 3*48**(1./6)
     weighted_edge_length = 9.48994571
+
+    volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
+@Shape.convex_polyhedron
+def dodecahedron_shape():
+    phi = .5*(1 + np.sqrt(5))
+
+    vertices = []
+    for (a, b, i) in itertools.product([-1/phi, 1/phi], [-phi, phi], range(3)):
+        vertices.append(np.roll((0, a, b), i))
+
+    vertices.extend(list(itertools.product([-1, 1], [-1, 1], [-1, 1])))
+
+    vertices = np.multiply(vertices, 14.472136405045545**(-1./3)).tolist()
+
+    volume = 1
+    surface_area = 5.3116139
+    weighted_edge_length = 8.42355368
+
+    volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
+@Shape.convex_polyhedron
+def icosahedron_shape():
+    phi = .5*(1 + np.sqrt(5))
+
+    vertices = []
+    for (i, one_term, phi_term) in itertools.product(
+            range(3), [-1, 1], [-phi, phi]):
+        vertices.append(np.roll((0, one_term, phi_term), i))
+
+    vertices = np.multiply(vertices, 17.453560309384446**(-1./3)).tolist()
+
+    volume = 1
+    surface_area = 5.14834876
+    weighted_edge_length = 8.43957795
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
 
