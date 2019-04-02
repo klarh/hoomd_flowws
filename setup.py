@@ -11,7 +11,7 @@ setup(name='hoomd_flowws',
       author_email='matthew.p.spellings@gmail.com',
       classifiers=[
           'Development Status :: 3 - Alpha',
-          'License :: OSI Approved :: BSD License',
+          'License :: OSI Approved :: MIT License',
           'Programming Language :: Python :: 3',
       ],
       description='Stage-based scientific workflows using HOOMD-Blue',
