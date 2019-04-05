@@ -37,6 +37,8 @@ class Run(flowws.Stage):
             help='Period for dumping a backup file'),
         Arg('dump_period', '-d', intfloat, 0,
             help='Period for dumping a trajectory file'),
+        Arg('trajectory_quantities', None, [str], [],
+            help='Additional trajectory quantities to dump'),
         Arg('dump_quantities', '-q', (intfloat, str),
             help='Dump period and comma-separated list of quantities to record (i.e. temperature,pressure)'),
         Arg('expand_by', None, float,
@@ -111,6 +113,8 @@ class Run(flowws.Stage):
 
             dynamic_quantities = (
                 ['viz_aniso_dynamic'] if 'type_shapes' in scope else ['viz_dynamic'])
+
+            dynamic_quantities.extend(self.arguments['trajectory_quantities'])
 
             dump = hoomd.dump.getar.simple(
                 dump_file.name,  self.arguments['dump_period'], 'a',
