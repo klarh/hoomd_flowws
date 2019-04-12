@@ -25,6 +25,8 @@ class Run(flowws.Stage):
             help='Integrator type'),
         Arg('temperature', None, float, 1,
             help='Temperature for isothermal simulations'),
+        Arg('ramp_t_to', None, float, None,
+            help='Ramp temperature to the given value over time during this stage'),
         Arg('tau_t', None, float, 1,
             help='Thermostat time constant for isothermal simulations'),
         Arg('pressure', None, float, 1,
@@ -50,25 +52,29 @@ class Run(flowws.Stage):
     def setup_integrator(self, scope, storage, context):
         integrator_type = self.arguments['integrator']
 
+        kT = self.arguments['temperature']
+
+        if self.arguments.get('ramp_t_to', None) is not None:
+            times = [0, self.arguments['steps']]
+            temperatures = [self.arguments['temperature'], self.arguments['ramp_t_to']]
+            kT = hoomd.variant.linear_interp(
+                list(zip(times, temperatures)), zero=scope['previous_steps'])
+
         if integrator_type == 'nve':
             integrator = hoomd.md.integrate.nve(hoomd.group.all())
         elif integrator_type == 'nvt':
-            kT = self.arguments['temperature']
             tau = self.arguments['tau_t']
             integrator = hoomd.md.integrate.nvt(
                 hoomd.group.all(), kT=kT, tau=tau)
         elif integrator_type == 'langevin':
-            kT = self.arguments['temperature']
             seed = self.arguments['bd_seed']
             integrator = hoomd.md.integrate.langevin(
                 hoomd.group.all(), kT=kT, seed=seed)
         elif integrator_type == 'brownian':
-            kT = self.arguments['temperature']
             seed = self.arguments['bd_seed']
             integrator = hoomd.md.integrate.brownian(
                 hoomd.group.all(), kT=kT, seed=seed)
         elif integrator_type == 'npt':
-            kT = self.arguments['temperature']
             tau = self.arguments['tau_t']
             pressure = self.arguments['pressure']
             tauP = self.arguments['tau_p']
@@ -158,7 +164,8 @@ class Run(flowws.Stage):
 
     def run(self, scope, storage):
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
-        scope['cumulative_steps'] = (scope.get('cumulative_steps', 0) +
+        scope['previous_steps'] = scope.get('cumulative_steps', 0)
+        scope['cumulative_steps'] = (scope['previous_steps'] +
                                      self.arguments['steps'])
 
         with HoomdContext(scope, storage) as ctx:
