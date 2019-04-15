@@ -54,7 +54,7 @@ class Damasceno2017Interaction(flowws.Stage):
         # subtract 1 to change index from from counting numbers (as
         # reported in the paper) to list indices (as used in this
         # module)
-        potential_index = int(round((self.arguments['depth'] + 2.2)/0.4)) - 1
+        potential_index = int(round((2.2 - self.arguments['depth'])/0.4)) - 1
         if potential_index < 0 or potential_index >= len(SI_TABLE_POTENTIALS):
             logger.warning('Potential well depth out of range, using the closest one in range instead')
         potential_index = np.clip(potential_index, 0, 9)
@@ -78,9 +78,11 @@ class Damasceno2017Interaction(flowws.Stage):
             all_types, all_types,
             func=local_table_grabber, rmin=rmin, rmax=rmax, coeff={})
 
-# contents of "potential.01.dat" through "potential.10.dat",
-# corresponding to a well depth of -2.2 + 0.4*i for
-# "potential.i.dat". Each row contains "r, energy, force" data.
+# contents of "potential.01.dat" through "potential.10.dat" from the
+# SI. Note that the paper says the well depth varies as -2.2 + 0.4*n,
+# but upon plotting you can see that "potential.01.dat" is the most
+# positive, rather than the most negative, potential in the
+# series. Each row contains "r, energy, force" data.
 SI_TABLE_POTENTIALS = []
 
 SI_TABLE_POTENTIALS.append(
