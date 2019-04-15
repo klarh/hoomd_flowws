@@ -25,7 +25,7 @@ class Interaction(flowws.Stage):
     GLOBAL_INTERACTION_MAP = {}
 
     def run(self, scope, storage):
-        """Registers this object to provide a DEM force compute in future MD stages"""
+        """Registers this object to provide a force compute in future MD stages"""
         callbacks = scope.setdefault('callbacks', collections.defaultdict(list))
 
         if self.arguments['reset']:
@@ -38,7 +38,7 @@ class Interaction(flowws.Stage):
     def __call__(self, scope, storage, context):
         """Callback to be performed before each run command.
 
-        Initializes a DEM pair potential interaction based on per-type
+        Initializes a pair potential interaction based on per-type
         shape information.
         """
         interaction_type = self.arguments['type']
