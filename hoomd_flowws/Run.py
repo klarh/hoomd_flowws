@@ -35,6 +35,8 @@ class Run(flowws.Stage):
             help='Barostat time constant for isobaric simulations'),
         Arg('bd_seed', None, int, 12,
             help='Random number seed for Brownian/Langevin thermostats'),
+        Arg('zero_momentum', '-z', intfloat, 0,
+            help='Period for zeroing the momentum of the system (default: disabled)'),
         Arg('backup_period', '-b', intfloat, 0,
             help='Period for dumping a backup file'),
         Arg('dump_period', '-d', intfloat, 0,
@@ -85,6 +87,9 @@ class Run(flowws.Stage):
                 'Unknown integrator type {}'.format(integrator_type))
 
         hoomd.md.integrate.mode_standard(dt=self.arguments['timestep_size'])
+
+        if self.arguments['zero_momentum']:
+            hoomd.md.update.zero_momentum(self.arguments['zero_momentum'])
 
         return integrator
 
