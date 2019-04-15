@@ -17,6 +17,7 @@ setup(name='hoomd_flowws',
       description='Stage-based scientific workflows using HOOMD-Blue',
       entry_points={
           'flowws_modules': [
+              'Damasceno2017Interaction = hoomd_flowws:Damasceno2017Interaction',
               'DEMInteraction = hoomd_flowws:DEMInteraction',
               'Init = hoomd_flowws:Init',
               'Interaction = hoomd_flowws:Interaction',
