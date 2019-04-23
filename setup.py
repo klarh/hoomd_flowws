@@ -6,6 +6,18 @@ from setuptools import setup
 with open('hoomd_flowws/version.py') as version_file:
     exec(version_file.read())
 
+module_names = [
+    'Damasceno2017Interaction',
+    'DEMInteraction',
+    'Init',
+    'Interaction',
+    'Run',
+    'RunHPMC',
+    'ShapeDefinition',
+]
+
+flowws_modules = ['{0} = hoomd_flowws.{0}:{0}'.format(name) for name in module_names]
+
 setup(name='hoomd_flowws',
       author='Matthew Spellings',
       author_email='matthew.p.spellings@gmail.com',
@@ -16,15 +28,7 @@ setup(name='hoomd_flowws',
       ],
       description='Stage-based scientific workflows using HOOMD-Blue',
       entry_points={
-          'flowws_modules': [
-              'Damasceno2017Interaction = hoomd_flowws:Damasceno2017Interaction',
-              'DEMInteraction = hoomd_flowws:DEMInteraction',
-              'Init = hoomd_flowws:Init',
-              'Interaction = hoomd_flowws:Interaction',
-              'Run = hoomd_flowws:Run',
-              'RunHPMC = hoomd_flowws:RunHPMC',
-              'ShapeDefinition = hoomd_flowws:ShapeDefinition',
-          ],
+          'flowws_modules': flowws_modules,
       },
       extras_require={},
       install_requires=['flowws'],

@@ -2,7 +2,7 @@ import argparse
 import collections
 import itertools
 
-import hoomd
+import hoomd, hoomd.md
 import flowws
 from flowws import Argument as Arg
 
