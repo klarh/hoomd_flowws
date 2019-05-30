@@ -33,7 +33,7 @@ class Init(flowws.Stage):
         particle_density = 4/np.pi if dimensions == 2 else 6/np.pi
 
         default_type_ratios = [1]*len(scope.get('type_shapes', [None]))
-        type_ratios = np.array((self.arguments['type_ratios'] or default_type_ratios), dtype=np.float32)
+        type_ratios = np.array((self.arguments.get('type_ratios', []) or default_type_ratios), dtype=np.float32)
         type_ratios /= np.sum(type_ratios)
 
         if 'type_shapes' in scope:

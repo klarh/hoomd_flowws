@@ -125,7 +125,7 @@ class Run(flowws.Stage):
             dynamic_quantities = (
                 ['viz_aniso_dynamic'] if 'type_shapes' in scope else ['viz_dynamic'])
 
-            dynamic_quantities.extend(self.arguments['trajectory_quantities'])
+            dynamic_quantities.extend(self.arguments.get('trajectory_quantities', []))
 
             dump = hoomd.dump.getar.simple(
                 dump_file.name,  self.arguments['dump_period'], 'a',
