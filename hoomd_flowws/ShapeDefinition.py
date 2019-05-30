@@ -54,14 +54,14 @@ class ShapeDefinition(flowws.Stage):
     calculations, and pair force/HPMC integrator configuration.
 
     Shapes consist of a base type, any parameters of the shape, and
-    modifiers. For example::
+    modifications. For example::
 
         # regular polygon with 4 vertices (square)
         shape = dict(type='regular_ngon', n=4,
-                     modifiers=[dict(type='scale', factor=2)])
+                     modifications=[dict(type='scale', factor=2)])
         # rounded tetrahedron
         shape = dict(type='tetrahedron',
-                     modifiers=[dict(type='round', radius=0.5)])
+                     modifications=[dict(type='round', radius=0.5)])
         ShapeDefinition(shape_arguments=[shape])
 
     """
