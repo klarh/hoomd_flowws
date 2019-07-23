@@ -42,7 +42,7 @@ class ShapedefArgument(Arg):
             elif key == 'unit_volume':
                 result[-1]['modifications'].append(dict(type=key))
             else:
-                results[-1][key] = eval(vals)
+                result[-1][key] = eval(vals)
 
         return result
 
