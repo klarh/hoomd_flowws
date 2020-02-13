@@ -16,10 +16,15 @@ composed to perform most common workflows.
 
 ## Installation
 
-Install hoomd_flowws from source using `pip`:
+Install `hoomd_flowws` from PyPI:
 
 ```
-pip install git+https://github.com/klarh/flowws.git#egg=flowws
+pip install hoomd_flowws
+```
+
+Alternatively, install from source:
+
+```
 pip install git+https://github.com/klarh/hoomd_flowws.git#egg=hoomd_flowws
 ```
 
@@ -32,5 +37,6 @@ documentation from source:
 ```
 git clone https://github.com/klarh/hoomd_flowws
 cd hoomd_flowws/doc
+pip install -r requirements.txt
 make html
 ```
