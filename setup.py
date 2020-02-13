@@ -16,7 +16,11 @@ module_names = [
     'ShapeDefinition',
 ]
 
-flowws_modules = ['{0} = hoomd_flowws.{0}:{0}'.format(name) for name in module_names]
+flowws_modules = []
+for name in module_names:
+    flowws_modules.append('{0} = hoomd_flowws.{0}:{0}'.format(name))
+    flowws_modules.append(
+        'hoomd_flowws.{0} = hoomd_flowws.{0}:{0}'.format(name))
 
 setup(name='hoomd_flowws',
       author='Matthew Spellings',
