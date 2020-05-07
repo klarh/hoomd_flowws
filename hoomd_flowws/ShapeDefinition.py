@@ -204,6 +204,7 @@ class Shape:
                 assert np.isclose(hull.volume, volume)
                 assert np.allclose(volume_polynomial, shapedef['rounding_volume_polynomial'])
             except AssertionError:
+                print('Error validating shape {}:'.format(name))
                 print(shapedef)
                 print('Computed volume, hull volume: {}, {}'.format(
                     volume, hull.volume))
@@ -309,6 +310,58 @@ def icosahedron_shape():
     weighted_edge_length = 8.43957795
 
     volume_poly = [4./3*np.pi, weighted_edge_length, surface_area, volume]
+
+    return ShapeInfo(vertices, volume_poly)
+
+@Shape.convex_polyhedron
+def trapezohedron_shape(n=5, r=.5, h=1):
+    """
+    :param n: half the number of faces
+    :param r: maximum distance of vertices when projected onto the z=0 plane
+    :param h: height of the shape
+    """
+    # Helpful figures (although we don't use the conventions there):
+    # https://www.athenopolis.net/2018/03/the-dimensions-of-ten-sided-die.html
+
+    a = r*np.cos(np.pi/n)
+    d = h/2*(r - a)/(r + a)
+
+    vertices = [(0, 0, h/2), (0, 0, -h/2)]
+
+    thetas_1 = np.linspace(0, 2*np.pi, n, endpoint=False)
+    thetas_2 = thetas_1 + np.pi/n
+
+    vertices.extend(zip(
+        r*np.cos(thetas_1), r*np.sin(thetas_1), itertools.repeat(d)))
+    vertices.extend(zip(
+        r*np.cos(thetas_2), r*np.sin(thetas_2), itertools.repeat(-d)))
+    vertices = np.array(vertices, dtype=np.float64)
+
+    tet_vertices = np.array([
+        vertices[0],
+        vertices[2],
+        vertices[2 + n]
+    ])
+    tet_volume = np.linalg.det(tet_vertices)/6
+    kite_area = 0.5*(np.linalg.norm(np.cross(
+        tet_vertices[1] - tet_vertices[0],
+        tet_vertices[2] - tet_vertices[0])))
+    kite_area += 0.5*(np.linalg.norm(np.cross(
+        tet_vertices[0] - tet_vertices[1],
+        tet_vertices[2] - tet_vertices[1])))
+
+    norm_1 = np.cross(vertices[2 + n] - vertices[1], vertices[2] - vertices[1])
+    norm_1 /= np.linalg.norm(norm_1)
+    norm_2 = np.cross(vertices[3] - vertices[1], vertices[2 + n] - vertices[1])
+    norm_2 /= np.linalg.norm(norm_2)
+    kite_angle = np.arccos(np.dot(norm_1, norm_2))
+    edge_length = 0.5*np.linalg.norm(tet_vertices[0] - tet_vertices[1])*kite_angle
+    norm_3 = np.cross(vertices[2] - vertices[0], vertices[2 + n] - vertices[0])
+    norm_3 /= np.linalg.norm(norm_3)
+    equator_angle = np.arccos(np.dot(norm_1, norm_3))
+    edge_length += 0.5*np.linalg.norm(tet_vertices[1] - tet_vertices[2])*equator_angle
+
+    volume_poly = [4./3*np.pi, edge_length*2*n, kite_area*2*n, tet_volume*4*n]
 
     return ShapeInfo(vertices, volume_poly)
 
