@@ -39,17 +39,7 @@ class Damasceno2017Interaction(flowws.Stage):
             pre_run_callbacks = [c for c in callbacks['pre_run']
                                  if not isinstance(c, Damasceno2017Interaction)]
             callbacks['pre_run'] = pre_run_callbacks
-
-        callbacks['pre_run'].append(self)
-
-    def __call__(self, scope, storage, context):
-        """Callback to be performed before each run command.
-
-        Initializes a pair potential interaction based on per-type
-        shape information.
-        """
-        nlist = hoomd.md.nlist.tree()
-        system = scope['system']
+            return
 
         # subtract 1 to change index from from counting numbers (as
         # reported in the paper) to list indices (as used in this
@@ -63,7 +53,21 @@ class Damasceno2017Interaction(flowws.Stage):
         potential_table_data = io.StringIO(potential_table_data)
 
         potential_table = np.loadtxt(potential_table_data).reshape((-1, 3))
-        rs, Us, Fs = potential_table.T
+        self.table_data = potential_table.T
+
+        callbacks['pre_run'].append(self)
+        scope.setdefault('visuals', []).append(self)
+
+    def __call__(self, scope, storage, context):
+        """Callback to be performed before each run command.
+
+        Initializes a pair potential interaction based on per-type
+        shape information.
+        """
+        nlist = hoomd.md.nlist.tree()
+        system = scope['system']
+
+        (rs, Us, Fs) = self.table_data
         width = len(rs)
         rmin, rmax = np.min(rs), np.max(rs)
         dr = (rmax - rmin)/(width - 1)
@@ -77,6 +81,12 @@ class Damasceno2017Interaction(flowws.Stage):
         table.pair_coeff.set(
             all_types, all_types,
             func=local_table_grabber, rmin=rmin, rmax=rmax, coeff={})
+
+    def draw_matplotlib(self, figure):
+        ax = figure.add_subplot(111)
+        ax.plot(self.table_data[0], self.table_data[1])
+        ax.set_xlabel('r')
+        ax.set_ylabel('Potential')
 
 # contents of "potential.01.dat" through "potential.10.dat" from the
 # SI. Note that the well depth varies as -2.2 + 0.4*n and that the
