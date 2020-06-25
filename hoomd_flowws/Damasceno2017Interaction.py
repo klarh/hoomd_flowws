@@ -26,7 +26,7 @@ class Damasceno2017Interaction(flowws.Stage):
     """
     ARGS = [
         Arg('reset', '-r', bool, False,
-            help='Clear previously-defined interactions beforehand'),
+            help='Disable previously-defined interactions'),
         Arg('depth', '-d', float, required=True,
             help='Well depth epsilon (the nearest reported potential is used)'),
     ]
@@ -37,7 +37,7 @@ class Damasceno2017Interaction(flowws.Stage):
 
         if self.arguments['reset']:
             pre_run_callbacks = [c for c in callbacks['pre_run']
-                                 if not isinstance(c, Interaction)]
+                                 if not isinstance(c, Damasceno2017Interaction)]
             callbacks['pre_run'] = pre_run_callbacks
 
         callbacks['pre_run'].append(self)
