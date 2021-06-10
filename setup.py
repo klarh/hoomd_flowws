@@ -9,6 +9,8 @@ with open('hoomd_flowws/version.py') as version_file:
 module_names = [
     'Damasceno2017Interaction',
     'DEMInteraction',
+    'Dshemuchadse2021LJGInteraction',
+    'Dshemuchadse2021OPPInteraction',
     'Init',
     'Interaction',
     'Run',
