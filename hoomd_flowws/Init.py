@@ -20,28 +20,40 @@ class Init(flowws.Stage):
             help='Scaling factor for mass of all particles'),
         Arg('type_ratios', '-t', [float],
             help='Prevalence (ratio) of each particle type'),
+        Arg('type_diameters', None, [float],
+            help='Diameter of each particle type (1 by default)'),
+        Arg('spacing_scale', None, float, 1.,
+            help='Additional scale factor for initial particle placement'),
     ]
 
     def run(self, scope, storage):
         # factor to scale initial particle distance by
-        spacing = 1.
+        spacing = 1.*self.arguments['spacing_scale']
 
         dimensions = scope.get('dimensions', 3)
         assert dimensions in (2, 3)
 
-        # treat default density to give 1 m_0 per unit-diameter sphere
-        particle_density = 4/np.pi if dimensions == 2 else 6/np.pi
-
         default_type_ratios = [1]*len(scope.get('type_shapes', [None]))
         type_ratios = np.array((self.arguments.get('type_ratios', []) or default_type_ratios), dtype=np.float32)
         type_ratios /= np.sum(type_ratios)
+
+        type_diameters = np.ones(len(type_ratios), dtype=np.float32)
+        for (i, d) in enumerate(self.arguments.get('type_diameters', [])):
+            type_diameters[i] = d
+
+        # treat default density to give 1 m_0 per unit-diameter sphere
+        particle_density = 0
+        for (f, d) in zip(type_ratios, type_diameters):
+            particle_density += np.pi*(d/2)**2 if dimensions == 2 else 4./3*np.pi*(d/2)**3
 
         if 'type_shapes' in scope:
             shapes = scope['type_shapes']
 
             assert len(type_ratios) == len(shapes)
 
-            spacing = 2*max(shape.get('circumsphere_radius', 0.5) for shape in shapes)
+            spacing = 2*max(shape.get('circumsphere_radius', diam/2)
+                            for (shape, diam) in zip(shapes, type_diameters))
+            spacing *= self.arguments['spacing_scale']
 
             type_masses = []
             type_moments = []
@@ -99,6 +111,8 @@ class Init(flowws.Stage):
             types[start:end] = i
         np.random.shuffle(types)
 
+        diameters = type_diameters[types]
+
         Lz = 1 if dimensions == 2 else grid_n*spacing
         box = hoomd.data.boxdim(
             grid_n*spacing, grid_n*spacing, Lz, 0, 0, 0, dimensions=dimensions)
@@ -115,5 +129,6 @@ class Init(flowws.Stage):
                 snapshot.particles.moment_inertia[:] = type_moments[types]
                 snapshot.particles.types = type_names
                 snapshot.particles.typeid[:] = types
+                snapshot.particles.diameter[:] = diameters
 
                 system = hoomd.init.read_snapshot(snapshot)
