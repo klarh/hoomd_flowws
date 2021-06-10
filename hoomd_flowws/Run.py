@@ -91,6 +91,8 @@ class Run(flowws.Stage):
         if self.arguments['zero_momentum']:
             hoomd.md.update.zero_momentum(self.arguments['zero_momentum'])
 
+        scope['integrator'] = integrator
+
         return integrator
 
     def setup_dumps(self, scope, storage, context):
@@ -174,6 +176,9 @@ class Run(flowws.Stage):
                                      self.arguments['steps'])
 
         with HoomdContext(scope, storage) as ctx:
+            for c in callbacks['post_init']:
+                c(scope, storage, ctx)
+
             if ctx.check_timesteps():
                 return
 
